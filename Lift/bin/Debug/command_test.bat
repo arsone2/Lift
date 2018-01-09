@@ -1,0 +1,1 @@
+lift.exe -f6 -h5 -s4 -o3 -c2 -x1

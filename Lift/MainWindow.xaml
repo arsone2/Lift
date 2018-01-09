@@ -1,0 +1,303 @@
+﻿<Window x:Class="Lift.MainWindow"
+        xmlns:local="clr-namespace:Lift"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        Title="Lift operation"
+        MinWidth="800" MinHeight="600" 
+        WindowStartupLocation="CenterScreen"
+        WindowState="Normal"
+        Background="#FFF0F0F0"
+        Loaded="Window_Loaded"
+        DataContext="{Binding RelativeSource={RelativeSource Self}}"
+        >
+
+    <!--<Window.Resources>
+        <local:IntConverter x:Key="CustomIntConverter"/>
+    </Window.Resources>-->
+    
+    
+    <Grid>
+
+        <!-- FLOORS` CALL BUTTONS -->
+
+        <ListView x:Name="floorListView"
+                  ItemsSource="{Binding Path=FloorItemsList}"
+                  SelectedIndex="{Binding Path=SelectedFloorIndex}"
+                  Width="233" 
+                  Margin="17,41,0,9.6" 
+                  HorizontalAlignment="Left"
+                  >
+
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="80"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="Этаж" 
+                                   VerticalAlignment="Center" 
+                                   FontSize="15"
+                                   FontWeight="Bold"
+                                   Margin="10, 0, 0, 0"
+                                   />
+
+                        <TextBlock Grid.Column="1" Text="{Binding floorNumber}" 
+                                   VerticalAlignment="Center" 
+                                   FontSize="15"
+                                   FontWeight="Bold"
+                                   Margin="10, 0, 0, 0"
+                                   />
+
+                        <Button Grid.Column="2" Content="ВЫЗОВ" 
+                                   Tag="{Binding floorNumber}"
+                                   FontSize="15"
+                                   FontWeight="Bold"
+                                   Width="90" Height="60"
+                                   />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+
+        </ListView>
+
+
+
+        <!--  LIFT MOVING SCHEMA  -->
+
+        <ScrollViewer x:Name="floorsScrollViewer"
+                    Margin="0,41,24.6,9.6" 
+                    HorizontalContentAlignment="Stretch" 
+                    HorizontalAlignment="Right" 
+                    Width="200"
+                    >
+
+            <!-- http://www.codeease.com/default-coordinate-system-and-customer-coordinate-system-in-wpf.html -->
+
+            <Canvas x:Name="showLift" Background="LightGray" VerticalAlignment="Top" >
+                <!--<Canvas.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleY="-1" />
+                        <TranslateTransform Y="{Binding Path=TranslateTransformY, UpdateSourceTrigger=PropertyChanged}" />
+                        <TranslateTransform Y="500" />
+                    </TransformGroup>
+                </Canvas.RenderTransform>-->
+            </Canvas>
+
+        </ScrollViewer>
+
+
+
+        <!--  PARAMETERS PANEL -->
+
+        <StackPanel Orientation="Vertical" 
+                    Margin="274,10,249.6,0" 
+                    Background="LightBlue" 
+                    Height="187" 
+                    VerticalAlignment="Top"
+                    >
+
+            <Label Content="ПАРАМЕТРЫ:"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Stretch"
+                   Background="#FF85D0E9"
+                   
+                   />
+
+            <StackPanel Orientation="Horizontal">
+
+                <Label Content="Количество этажей:"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Left" 
+                    Width="230"
+                    />
+
+                <TextBox 
+                    Text="{Binding Path=FloorsTotal}"
+        	        HorizontalAlignment="Left"  
+                    FontWeight="Bold"
+        	        Width="28" Height="23"
+                    IsReadOnly="True"
+                    />
+
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+
+                <Label Content="Высота этажа, м:"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Left" 
+                    VerticalAlignment="Top" 
+                    Width="230"
+                    />
+
+                <TextBox 
+                    Text="{Binding Path=FloorHeight}"
+        	        HorizontalAlignment="Left"  
+                    FontWeight="Bold"
+        	        TextWrapping="Wrap"
+        	        Width="28" Height="23"
+                    IsReadOnly="True"
+                    />
+
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+
+                <Label Content="Скорость лифта, м/с:"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Left" 
+                    Width="230"
+                    />
+
+                <TextBox 
+                    Text="{Binding Path=LiftSpeed}" 
+        	        HorizontalAlignment="Left"  
+                    FontWeight="Bold"
+        	        TextWrapping="Wrap"
+        	        Width="28" Height="23"
+                    IsReadOnly="True"
+                    />
+
+            </StackPanel>
+
+
+            <StackPanel Orientation="Horizontal">
+                
+                <Label Content="Время открывания двери лифта, с:"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Left" 
+                    Width="230"
+                    />
+
+                <TextBox 
+                    Text="{Binding Path=DoorsOpeningTime}"
+        	        HorizontalAlignment="Left"  
+                    FontWeight="Bold"
+        	        TextWrapping="Wrap" 
+        	        Width="28" Height="23"
+                    IsReadOnly="True"
+                    />
+                
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                
+                <Label Content="Время закрывания двери лифта, с:"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Left" 
+                    Width="230"
+                    />
+                
+                <TextBox 
+                    Text="{Binding Path=DoorsClosingTime}"
+        	        HorizontalAlignment="Left"  
+                    FontWeight="Bold"
+        	        TextWrapping="Wrap" 
+        	        Width="28" Height="23"
+                    IsReadOnly="True"
+                    />
+                
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                
+                <Label Content="Время ожидания двери лифта, с:"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Left" 
+                    Width="230"
+                    />
+                
+                <TextBox 
+                    Text="{Binding Path=DoorsWaitOpenTime}"
+        	        HorizontalAlignment="Left"  
+                    FontWeight="Bold"
+        	        TextWrapping="Wrap" 
+        	        Width="28" Height="23"
+                    IsReadOnly="True"
+                    />
+                
+            </StackPanel>
+
+        </StackPanel>
+
+
+
+        <!--  LIFT CONTROL PANEL  -->
+
+        <ScrollViewer x:Name="controlPanelScrollViewer" 
+                      HorizontalScrollBarVisibility="Auto"
+                      Margin="274,314,249.6,9.6"
+                      >
+
+            <StackPanel Orientation="Vertical">
+                
+            <Button x:Name="Start" 
+                    Content="ПУСК" 
+                    FontWeight="Bold" 
+                    Margin="30, 5, 30, 5" 
+                    Click="Start_Click" 
+                    ToolTip="Закрыть двери лифта и продолжать движение"
+                    />
+            
+            <WrapPanel x:Name="controlWrapPanel" 
+                       Orientation="Horizontal"
+                       Width="240"
+                       Background="LightCyan" 
+                       />
+
+            </StackPanel>
+
+        </ScrollViewer>
+
+        
+        <!--  LIFT INNER PANEL  -->
+
+        <Label Content="ПАНЕЛЬ УПРАВЛЕНИЯ ЛИФТА" 
+               Margin="274,288,249.6,0" 
+               FontWeight="Bold"
+               VerticalAlignment="Top" 
+               HorizontalContentAlignment="Center"
+               Background="#FFB9FEFE" 
+               />
+
+        <Label Content="ПАНЕЛИ УПРАВЛЕНИЯ НА ЭТАЖАХ" 
+        	   Margin="17,10,0,0" 
+        	   FontWeight="Bold"
+               HorizontalAlignment="Left"
+        	   VerticalAlignment="Top" 
+               HorizontalContentAlignment="Center"
+               Width="233"
+               />
+
+        <Label Content="СХЕМА ДВИЖЕНИЯ ЛИФТА" 
+        	   Margin="0,10,24.6,0" 
+         	   FontWeight="Bold"
+        	   HorizontalAlignment="Right"
+        	   VerticalAlignment="Top" 
+        	   HorizontalContentAlignment="Center"
+        	   Width="200"
+               />
+
+        
+        <!-- TEST DATA PANEL -->
+
+        <ScrollViewer x:Name="testScrollViewer" 
+                      HorizontalScrollBarVisibility="Auto"
+        	          Margin="274,214,249.6,0" 
+                      Height="69" 
+                      VerticalAlignment="Top"
+                      >
+            <TextBox x:Name="testTextBox" TextWrapping="Wrap" />
+        </ScrollViewer>
+        
+        
+    </Grid>
+</Window>

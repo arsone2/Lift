@@ -1,0 +1,14 @@
+D:\Visual Studio Projects\Lift\Lift\bin\Debug\Lift.exe
+D:\Visual Studio Projects\Lift\Lift\bin\Debug\Lift.pdb
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\MainWindow.baml
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\MainWindow.g.cs
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\App.g.cs
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift_MarkupCompile.cache
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift.g.resources
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift.Properties.Resources.resources
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift.csproj.GenerateResource.Cache
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift.exe
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift.pdb
+d:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift_MarkupCompile.lref
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\ParametersErrorWindow.baml
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\ParametersErrorWindow.g.cs

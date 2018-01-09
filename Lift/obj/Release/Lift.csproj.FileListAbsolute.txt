@@ -1,0 +1,11 @@
+d:\Visual Studio Projects\Lift\Lift\bin\Release\Lift.exe
+d:\Visual Studio Projects\Lift\Lift\bin\Release\Lift.pdb
+d:\Visual Studio Projects\Lift\Lift\obj\Release\MainWindow.baml
+d:\Visual Studio Projects\Lift\Lift\obj\Release\MainWindow.g.cs
+d:\Visual Studio Projects\Lift\Lift\obj\Release\App.g.cs
+d:\Visual Studio Projects\Lift\Lift\obj\Release\Lift_MarkupCompile.cache
+d:\Visual Studio Projects\Lift\Lift\obj\Release\Lift.g.resources
+d:\Visual Studio Projects\Lift\Lift\obj\Release\Lift.Properties.Resources.resources
+d:\Visual Studio Projects\Lift\Lift\obj\Release\Lift.csproj.GenerateResource.Cache
+d:\Visual Studio Projects\Lift\Lift\obj\Release\Lift.exe
+d:\Visual Studio Projects\Lift\Lift\obj\Release\Lift.pdb
