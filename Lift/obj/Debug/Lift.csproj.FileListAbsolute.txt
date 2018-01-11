@@ -12,3 +12,4 @@ D:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift.pdb
 d:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift_MarkupCompile.lref
 D:\Visual Studio Projects\Lift\Lift\obj\Debug\ParametersErrorWindow.baml
 D:\Visual Studio Projects\Lift\Lift\obj\Debug\ParametersErrorWindow.g.cs
+D:\Visual Studio Projects\Lift\Lift\obj\Debug\Lift.csprojResolveAssemblyReference.cache

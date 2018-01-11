@@ -682,7 +682,7 @@ namespace Lift
 
                 Debug.WriteLine("_liftState = " + _liftState.ToString());
 
-                for (double height = start; height < end; height++)
+                for (double height = start; height <= end; height++) // add <= !!!
                 {
                     if (_backgroundWorkerLift.CancellationPending)
                     {
@@ -1086,6 +1086,8 @@ namespace Lift
             }
 
             double targetFloorPositionY = (_floorsTotal - targetFloor + 1) * FLOOR_HEIGHT - LIFT_HEIGHT - 1;
+
+            Debug.WriteLine("targetFloorPositionY  = " + targetFloorPositionY + "  _currentLiftPositionY = " + _currentLiftPositionY);
 
             // if current pos = target pos then DO NOTHING
             if (targetFloorPositionY == _currentLiftPositionY)
