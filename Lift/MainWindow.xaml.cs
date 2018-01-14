@@ -4,15 +4,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 
@@ -85,13 +80,37 @@ namespace Lift
         private double _floorLineStrokeThickness = 1;
 
 
-        // FLOOR ITEM (floor panel to lift call)
-        public class FloorItem
+        // FLOOR ITEM (floor panels)
+        public class FloorCallItem
         {
             public int floorNumber { get; set; } // floor number (starts from 1)
 
-            public bool callButtonPressed { get; set; }
+            public bool floorUpCall { get; set; }
 
+            public bool floorDownCall { get; set; }
+
+            public Visibility buttonUpVisibility { get; set; }
+
+            public Visibility buttonDownVisibility { get; set; }
+        }
+
+
+        private static ObservableCollection<FloorCallItem> _floorCallButtonsList = new ObservableCollection<FloorCallItem>();
+
+        public ObservableCollection<FloorCallItem> FloorCallButtonsList
+        {
+            get
+            {
+                return _floorCallButtonsList;
+            }
+            set
+            {
+                if (_floorCallButtonsList != value)
+                {
+                    _floorCallButtonsList = value;
+                    OnPropertyChanged("FloorCallButtonsList");
+                }
+            }
         }
 
         // --------------------------------------------
@@ -154,8 +173,6 @@ namespace Lift
             }
         }
 
-
-
         private const int DOOR_WIDTH = 60; // door rectangle width in DIP = (LIFT_WIDTH / 2)
 
         private Rectangle _leftDoorRect;
@@ -204,6 +221,23 @@ namespace Lift
 
         private static int _currentLiftFloor; // current lift floor (value from 1 to _floorsTotal)
 
+        public int CurrentLiftFloor
+        {
+            get
+            {
+                return _currentLiftFloor;
+            }
+            set
+            {
+                if (_currentLiftFloor != value)
+                {
+                    _currentLiftFloor = value;
+                    OnPropertyChanged("CurrentLiftFloor");
+                }
+            }
+        }
+
+
         private const int LIFT_HEIGHT = 80; // lift rectangle height
 
         private const int LIFT_WIDTH = 60; // lift rectangle width
@@ -223,83 +257,57 @@ namespace Lift
         private static bool _liftProcessing;
 
 
+        private static ObservableCollection<LiftInnerCallItem> _liftControlButtonsList = new ObservableCollection<LiftInnerCallItem>();
+
+        public ObservableCollection<LiftInnerCallItem> LiftControlButtonsList
+        {
+            get
+            {
+                return _liftControlButtonsList;
+            }
+            set
+            {
+                if (_liftControlButtonsList != value)
+                {
+                    _liftControlButtonsList = value;
+                    OnPropertyChanged("LiftControlButtonsList");
+                }
+            }
+        }
+
+
+        public class LiftInnerCallItem
+        {
+            public int targetFloor { get; set; }
+            public bool liftInnerCall { get; set; }
+        }
+
         // --------------------------------------------
 
         private static object _lockObject = new object();
 
 
         // lift tasks list
-        private List<CallItem> _liftCallsList = new List<CallItem>();
+        private List<CallTaskItem> _liftCallsList = new List<CallTaskItem>();
 
 
-        public class CallItem
+        public class CallTaskItem
         {
-            public int floorNumber { get; set; } // floor number (starts from 1)
+            public int floorNumber { get; set; } // called floor number (starts from 1)
 
-            public double floorPositionY { get; set; } // floor pos Y
+            public double floorPositionY { get; set; } // target floor Y-position (for lift graph positioning)
 
+            public CallButtonTypeEnum callType { get; set; }
         }
 
 
-        private static ObservableCollection<FloorItem> _floorItemsList = new ObservableCollection<FloorItem>();
-
-        public ObservableCollection<FloorItem> FloorItemsList
+        public enum CallButtonTypeEnum
         {
-            get
-            {
-                return _floorItemsList;
-            }
-            set
-            {
-                if (_floorItemsList != value)
-                {
-                    _floorItemsList = value;
-                    OnPropertyChanged("FloorItemsList");
-                }
-            }
+            DEFAULT,           // 0
+            INNER_LIFT_BUTTON, // 1
+            FLOOR_UP_BUTTON,   // 2
+            FLOOR_DOWN_BUTTON  // 3
         }
-
-
-        private int _selectedFloorIndex;
-
-
-        public int SelectedFloorIndex
-        {
-            get
-            {
-                return _selectedFloorIndex;
-            }
-
-            set
-            {
-                if (_selectedFloorIndex != value)
-                {
-                    _selectedFloorIndex = value;
-                    OnPropertyChanged("SelectedFloorIndex");
-                }
-            }
-        }
-
-        //private double _translateTransformY;
-
-
-        //public double TranslateTransformY
-        //{
-        //    get
-        //    {
-        //        return _translateTransformY;
-        //    }
-
-        //    set
-        //    {
-        //        if (_translateTransformY != value)
-        //        {
-        //            _translateTransformY = value;
-        //            OnPropertyChanged("TranslateTransformY");
-        //        }
-        //    }
-        //}
-
 
         // --------------------------------------------
         // CONSTRUCTOR
@@ -347,34 +355,70 @@ namespace Lift
             //this.showLift.RenderTransform = scaleTransform;
             //this.showLift.RenderTransform = translateTransform;
 
-            // Init
-            //FloorItemsList = new ObservableCollection<FloorItem>();
+            // ObservableCollection<FloorCallItem> FloorCallButtonsList
 
+
+            // --------------------------------------------------
+            // create floor buttons
             for (int i = _floorsTotal - 1; i >= 0; i--)
             {
-                FloorItemsList.Add(new FloorItem { floorNumber = i + 1 });
+                // create element
+                FloorCallItem floorCallItem = new FloorCallItem
+                {
+                    floorNumber = i + 1
+                };
+
+
+                if (i == (_floorsTotal - 1)) // top floor
+                {
+                    floorCallItem.buttonUpVisibility = System.Windows.Visibility.Hidden;
+                }
+                else if (i == 0) // first floor
+                {
+                    floorCallItem.buttonDownVisibility = System.Windows.Visibility.Hidden;
+                }
+                else // other floors
+                {
+                    floorCallItem.buttonUpVisibility = System.Windows.Visibility.Visible;
+                    floorCallItem.buttonDownVisibility = System.Windows.Visibility.Visible;
+                }
+
+                FloorCallButtonsList.Add(floorCallItem);
             }
 
 
-            floorListView.AddHandler(Button.ClickEvent, new RoutedEventHandler(buttonFloorCall_Click));
+            // --------------------------------------------------
+            // create inner lift control panel
 
-            //floorListView.ItemsSource = FloorItemsList;
+            for (int i = (_floorsTotal - 1); i >= 0; i--)
+            {
+                // create element
+                LiftInnerCallItem liftInnerCallItem = new LiftInnerCallItem
+                {
+                    targetFloor = i + 1
+                };
+
+                LiftControlButtonsList.Add(liftInnerCallItem);
+            }
 
 
-
+            // --------------------------------------------------
 
             // set default lift state
-            _liftState = LiftStateEnum.STOPPED;
+            /// _liftState = LiftStateEnum.STOPPED;
+            _liftState = LiftStateEnum.MOVE_UP; // TEST !!
 
             _doorState = DoorStateEnum.DOORS_OPENED;
 
             /// _liftPositionY = (_floorsTotal) * FLOOR_HEIGHT - LIFT_HEIGHT - 1; // lift on the 1 floor
             /// _liftPositionY = (_floorsTotal - 2 + 1) * FLOOR_HEIGHT - LIFT_HEIGHT - 1; // lift on the 2 floor
 
-            _currentLiftFloor = 1; // lift on the FIRST floor !!
+            CurrentLiftFloor = 2; // lift on the FIRST floor !!
 
-            _currentLiftPositionY = (_floorsTotal - _currentLiftFloor + 1) * FLOOR_HEIGHT - LIFT_HEIGHT - 1; // lift on the 1 floor !!
+            _currentLiftPositionY = (_floorsTotal - CurrentLiftFloor + 1) * FLOOR_HEIGHT - LIFT_HEIGHT - 1; // lift on the 1 floor !!
 
+            // (_floorsTotal - CurrentLiftFloor + 1) = (_currentLiftPositionY + LIFT_HEIGHT + 1) / FLOOR_HEIGHT
+            // CurrentLiftFloor = _floorsTotal + 1 - (_currentLiftPositionY + LIFT_HEIGHT + 1) / FLOOR_HEIGHT
 
             //MessageBox.Show("_liftPositionY = " + _liftPositionY.ToString()); // 1919
 
@@ -466,7 +510,6 @@ namespace Lift
             {
                 // --------------------------------------------------
                 // create floor horizontal line
-
                 Line floorLine = new Line()
                 {
                     Stroke = System.Windows.Media.Brushes.Black,
@@ -486,10 +529,9 @@ namespace Lift
 
                 // --------------------------------------------------
                 // create TextBlock for display floor number
-
                 TextBlock floorNumberTextBlock = new TextBlock
                 {
-                    Text = FloorItemsList[i - 1].floorNumber.ToString(),
+                    Text = (_floorsTotal - i + 1).ToString() + " этаж",
                     Width = 100,
                     Height = 50,
                     FontSize = 20
@@ -502,7 +544,7 @@ namespace Lift
                 this.showLift.Children.Add(floorNumberTextBlock);
 
                 // set TextBlock position
-                Canvas.SetLeft(floorNumberTextBlock, 130); // X-position
+                Canvas.SetLeft(floorNumberTextBlock, 100); // X-position
                 Canvas.SetTop(floorNumberTextBlock, i * FLOOR_HEIGHT - FLOOR_HEIGHT / 2); // Y-position
             }
 
@@ -535,7 +577,7 @@ namespace Lift
 
 
             // --------------------------------------------------
-            // paint DOOR
+            // paint lift's DOOR
 
             _leftDoorRect = new Rectangle
             {
@@ -553,36 +595,11 @@ namespace Lift
             // add to parent control
             this.showLift.Children.Add(_leftDoorRect);
 
-
-            // --------------------------------------------------
-            // paint inner lift control panel (controlWrapPanel)
-
-            for (int i = 0; i < _floorsTotal; i++)
-            {
-                Button button = new Button
-                {
-                    Width = 60,
-                    Height = 60,
-                    Content = i + 1,
-                    Margin = new Thickness(10),
-                    FontSize = 20
-                };
-
-                // add click event handler to every button
-                button.AddHandler(Button.ClickEvent, new RoutedEventHandler(buttonLift_Click));
-
-                // add to parent control
-                this.controlWrapPanel.Children.Add(button);
-            }
-
-
-            // scroll all containers to bottom
+            // scroll ListView to bottom
             floorListView.SelectedItem = floorListView.Items[floorListView.Items.Count - 1];
             floorListView.ScrollIntoView(floorListView.SelectedItem);
 
             floorsScrollViewer.ScrollToBottom();
-
-            /// controlPanelScrollViewer.ScrollToBottom();
         }
 
 
@@ -642,7 +659,7 @@ namespace Lift
         // door closed
         private void CloseDoor_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            Debug.WriteLine("_liftState = " + _liftState.ToString());
+            //Debug.WriteLine("_liftState = " + _liftState.ToString());
 
             // run lift move
             _backgroundWorkerLift.RunWorkerAsync(e.Result); // e.Result = target Y-coordinate
@@ -680,9 +697,7 @@ namespace Lift
                 // set LIFT STATE = MOVING DOWN
                 _liftState = LiftStateEnum.MOVE_DOWN;
 
-                Debug.WriteLine("_liftState = " + _liftState.ToString());
-
-                for (double height = start; height <= end; height++) // add <= !!!
+                for (double height = start; height <= end; height++) // add "<=" !!!
                 {
                     if (_backgroundWorkerLift.CancellationPending)
                     {
@@ -692,13 +707,11 @@ namespace Lift
 
                     liftWorker.ReportProgress(0, height);
 
-
                     // lock threads common variables
                     lock (_lockObject)
                     {
                         _currentLiftPositionY = height;
                     }
-
 
                     System.Threading.Thread.Sleep(delayMilliseconds);
                 }
@@ -709,8 +722,6 @@ namespace Lift
             {
                 // set LIFT STATE = MOVING UP
                 _liftState = LiftStateEnum.MOVE_UP;
-
-                Debug.WriteLine("_liftState = " + _liftState.ToString());
 
                 for (double height = start; height > end - 1; height--)
                 {
@@ -730,6 +741,8 @@ namespace Lift
                 /// e.Result = _currentLiftPositionY;
                 e.Result = _liftCallsList[0].floorPositionY;
             }
+
+            Debug.WriteLine("_liftState = " + _liftState.ToString());
         }
 
 
@@ -743,6 +756,15 @@ namespace Lift
 
             // set lift door position
             Canvas.SetTop(_leftDoorRect, height);
+
+            // calculate lift`s floor
+            int currentLiftPos = (int)(_floorsTotal + 1 - (_currentLiftPositionY + LIFT_HEIGHT + 1) / FLOOR_HEIGHT);
+
+            // show test data
+            //testTextBox.Clear();
+            //testTextBox.Text = "Lift floor = " + currentLiftPos.ToString();
+
+            CurrentLiftFloor = currentLiftPos;
         }
 
 
@@ -750,9 +772,64 @@ namespace Lift
         private void Lift_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             // set LIFT STATE = STOPPED
-            _liftState = LiftStateEnum.STOPPED;
+            ///  _liftState = LiftStateEnum.STOPPED; // COMMENTED !!
 
             Debug.WriteLine("_liftState = " + _liftState.ToString());
+            Debug.WriteLine("_currentLiftFloor  = " + CurrentLiftFloor);
+
+
+            // change buttons indication
+
+            /*
+            if (_liftCallsList[0].callType == CallButtonTypeEnum.FLOOR_UP_BUTTON)
+            {
+                FloorCallButtonsList[_floorsTotal - CurrentLiftFloor].floorUpCall = false;
+                
+                // update ListView data and repaint
+                floorListView.Items.Refresh();
+            }
+            else if (_liftCallsList[0].callType == CallButtonTypeEnum.FLOOR_DOWN_BUTTON)
+            {
+                FloorCallButtonsList[_floorsTotal - CurrentLiftFloor].floorDownCall = false;
+
+                // update ListView data and repaint
+                floorListView.Items.Refresh();
+            }
+            else if (_liftCallsList[0].callType == CallButtonTypeEnum.INNER_LIFT_BUTTON)
+            {
+                LiftControlButtonsList[_floorsTotal - CurrentLiftFloor].liftInnerCall = false;
+
+                // update ListView data and repaint
+                liftListView.Items.Refresh();
+            }
+            */
+
+            FloorCallButtonsList[_floorsTotal - CurrentLiftFloor].floorUpCall = false;
+            FloorCallButtonsList[_floorsTotal - CurrentLiftFloor].floorDownCall = false;
+
+            // update ListView data and repaint
+            floorListView.Items.Refresh();
+
+            LiftControlButtonsList[_floorsTotal - CurrentLiftFloor].liftInnerCall = false;
+
+            // update ListView data and repaint
+            liftListView.Items.Refresh();
+
+
+            // remove dublicates
+            for (int i = (_liftCallsList.Count - 1); i >= 0; i--)
+            {
+                if (_liftCallsList[i].floorNumber == _liftCallsList[0].floorNumber)
+                {
+                    _liftCallsList.RemoveAt(i);
+                }
+            }
+
+
+            // remove completed task from lift task list
+            /// _liftCallsList.RemoveAt(0);
+
+
 
             // run openning door
             _backgroundWorkerOpenDoor.RunWorkerAsync(e.Result); // =  _liftPositionY
@@ -786,7 +863,6 @@ namespace Lift
             }
 
             _doorState = DoorStateEnum.DOORS_OPENED; // set door state = opened
-
 
             e.Result = targetFloorY;
         }
@@ -823,25 +899,16 @@ namespace Lift
 
                 System.Threading.Thread.Sleep(10);
             }
-
-            //System.Threading.Thread.Sleep((int)(DoorsWaitOpenTime * 1000)); // waiting when door open
         }
 
 
         // when opened door waiting ends
         private void DoorWaitOpened_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            // remove completed task from lift task list
-            _liftCallsList.RemoveAt(0);
-
-            // _currentTargetFloor = _liftCallsList[i].floorNumber; // set closest target
-
             // task completed
             _liftProcessing = false;
 
-
             ShowTestData();
-
 
             // if call queque is empty then nothing to do
             if (_liftCallsList.Count == 0)
@@ -850,15 +917,9 @@ namespace Lift
                 return;
             }
 
-            // another optimization
-            SetClosestTarget();
-
-
             // run next task
-            _backgroundWorkerCloseDoor.RunWorkerAsync(_liftCallsList[0].floorPositionY);
+            SetLiftMoveSequence();
         }
-
-
         // ---------------------------------------------
 
 
@@ -870,14 +931,9 @@ namespace Lift
 
             SetDefaultParameters();
 
-            //Init();
-
-
             // when no command line parameters found
             if (argumentsArray.Length == 1) // when only full path to application
             {
-                //SetDefaultParameters();
-
                 Init();
 
                 return;
@@ -1021,9 +1077,7 @@ namespace Lift
         }
 
 
-
-        // when floor lift call button clicked
-        private void buttonFloorCall_Click(object sender, RoutedEventArgs e)
+        private void buttonFloorUpClick(object sender, RoutedEventArgs e)
         {
             // get pressed button
             Button button = e.OriginalSource as Button;
@@ -1031,16 +1085,61 @@ namespace Lift
             // get selected floor number (starts from 1)
             int selectedFloor = (int)button.Tag;
 
-            // highlight listView row
-            SelectedFloorIndex = _floorsTotal - selectedFloor;
+            FloorCallButtonsList[_floorsTotal - selectedFloor].floorUpCall = true;
 
-            // add new task
-            AddTask(selectedFloor);
+            // update ListView data and repaint
+            floorListView.Items.Refresh();
+
+            // calculate target Y-position
+            double targetFloorPositionY = (_floorsTotal - selectedFloor + 1) * FLOOR_HEIGHT - LIFT_HEIGHT - 1;
+
+            // create new task item
+            CallTaskItem newTaskItem = new CallTaskItem
+            {
+                floorNumber = selectedFloor,
+                floorPositionY = targetFloorPositionY,
+                callType = CallButtonTypeEnum.FLOOR_UP_BUTTON
+            };
+
+            // add data to task list
+            AddData(newTaskItem);
+
+            ShowTestData();
         }
 
 
-        // lift inner control panel button clicked
-        private void buttonLift_Click(object sender, RoutedEventArgs e)
+
+        private void buttonFloorDownClick(object sender, RoutedEventArgs e)
+        {
+            // get pressed button
+            Button button = e.OriginalSource as Button;
+
+            // get selected floor number (starts from 1)
+            int selectedFloor = (int)button.Tag;
+
+            FloorCallButtonsList[_floorsTotal - selectedFloor].floorDownCall = true;
+
+            // update ListView data and repaint
+            floorListView.Items.Refresh();
+
+            // add data to task list
+            double targetFloorPositionY = (_floorsTotal - selectedFloor + 1) * FLOOR_HEIGHT - LIFT_HEIGHT - 1;
+
+            // create new task item
+            CallTaskItem newTaskItem = new CallTaskItem
+            {
+                floorNumber = selectedFloor,
+                floorPositionY = targetFloorPositionY,
+                callType = CallButtonTypeEnum.FLOOR_DOWN_BUTTON
+            };
+
+            AddData(newTaskItem);
+
+            ShowTestData();
+        }
+
+
+        private void buttonLiftClick(object sender, RoutedEventArgs e)
         {
             Button button = e.OriginalSource as Button;
 
@@ -1057,55 +1156,136 @@ namespace Lift
                 return;
             }
 
-            // add new task
-            AddTask(selectedFloor);
-        }
-
-
-        private void AddTask(int targetFloor)
-        {
-            // is such floor un the task list found?
-            bool found = false;
-
-            // if such target floor already has ??
-            for (int i = 0; i < _liftCallsList.Count; i++)
-            {
-                if (_liftCallsList[i].floorNumber == targetFloor)
-                {
-                    //MessageBox.Show("already has");
-                    found = true;
-                    break;
-                }
-            }
-
-            // if task already has then return
-            if (found)
-            {
-                //MessageBox.Show("found");
-                return;
-            }
-
-            double targetFloorPositionY = (_floorsTotal - targetFloor + 1) * FLOOR_HEIGHT - LIFT_HEIGHT - 1;
-
-            Debug.WriteLine("targetFloorPositionY  = " + targetFloorPositionY + "  _currentLiftPositionY = " + _currentLiftPositionY);
+            double targetFloorPositionY = (_floorsTotal - selectedFloor + 1) * FLOOR_HEIGHT - LIFT_HEIGHT - 1;
 
             // if current pos = target pos then DO NOTHING
             if (targetFloorPositionY == _currentLiftPositionY)
             {
                 //MessageBox.Show("NOWHERE TO MOVE");
+                ShowTestData();
                 return;
             }
 
-            // add new task to tasks list
-            _liftCallsList.Add(new CallItem
-            {
-                floorNumber = targetFloor,
-                floorPositionY = targetFloorPositionY
-            });
+            LiftControlButtonsList[_floorsTotal - selectedFloor].liftInnerCall = true;
 
+            // update ListView data and repaint
+            liftListView.Items.Refresh();
+
+            CallTaskItem newTaskItem = new CallTaskItem
+            {
+                floorNumber = selectedFloor,
+                floorPositionY = targetFloorPositionY,
+                callType = CallButtonTypeEnum.INNER_LIFT_BUTTON
+            };
+
+            // add data to task list
+            AddData(newTaskItem);
+
+            ShowTestData();
+        }
+
+
+
+        private void AddData(CallTaskItem callTaskItem)
+        {
+            // if such target floor already has ??
+            for (int i = 0; i < _liftCallsList.Count; i++)
+            {
+                if (_liftCallsList[i].callType == callTaskItem.callType
+                    && _liftCallsList[i].floorNumber == callTaskItem.floorNumber
+                    )
+                {
+                    //MessageBox.Show("already has");
+                    return;
+                }
+            }
+
+            // add new task to tasks list
+            _liftCallsList.Add(callTaskItem);
 
             // MAIN LIFT LOGIC
-            SetClosestTarget();
+            SetLiftMoveSequence();
+
+            ShowTestData();
+        }
+
+
+        private void SetLiftMoveSequence()
+        {
+            // initial minimal value
+            double minValue = FLOOR_HEIGHT * _floorsTotal;
+
+            int targetIndex = -1;
+
+            Debug.WriteLine("SetLiftMoveSequence: _currentLiftPositionY = " + _currentLiftPositionY);
+
+            if (_liftState == LiftStateEnum.MOVE_UP)
+            {
+                for (int i = 0; i < _liftCallsList.Count; i++)
+                {
+                    double newMin = Math.Abs(_currentLiftPositionY - _liftCallsList[i].floorPositionY);
+
+                    if (newMin < minValue
+                        && _liftCallsList[i].floorPositionY < _currentLiftPositionY
+                        &&
+                        (_liftCallsList[i].callType == CallButtonTypeEnum.FLOOR_UP_BUTTON
+                        || _liftCallsList[i].callType == CallButtonTypeEnum.INNER_LIFT_BUTTON
+                        ))
+                    {
+                        minValue = newMin; // set found min value
+
+                        targetIndex = i;
+                    }
+                }
+
+                if (targetIndex == -1) // if no upper floor tasks
+                {
+                    _liftState = LiftStateEnum.MOVE_DOWN; // then change lift direction
+                    Debug.WriteLine("NO FOUND UP TASKS !!");
+                }
+            }
+
+            Debug.WriteLine("SORT - UP: targetIndex = " + targetIndex);
+
+            // find lower tasks
+            if (_liftState == LiftStateEnum.MOVE_DOWN)
+            {
+                for (int i = 0; i < _liftCallsList.Count; i++)
+                {
+                    double newMin = Math.Abs(_currentLiftPositionY - _liftCallsList[i].floorPositionY);
+
+                    if (newMin < minValue
+                        && _liftCallsList[i].floorPositionY > _currentLiftPositionY
+                        &&
+                        (_liftCallsList[i].callType == CallButtonTypeEnum.FLOOR_UP_BUTTON
+                        || _liftCallsList[i].callType == CallButtonTypeEnum.INNER_LIFT_BUTTON
+                        ))
+                    {
+                        minValue = newMin; // set found min value
+
+                        targetIndex = i;
+                    }
+                }
+
+                if (targetIndex == -1) // if no lower floors
+                {
+                    _liftState = LiftStateEnum.MOVE_UP; // then change lift direction
+                    Debug.WriteLine("NO FOUND DOWN TASKS !!");
+                }
+            }
+
+            if (targetIndex >= 0 && targetIndex < _liftCallsList.Count) // add !!!
+            {
+                // set target element to 0 position (swap elements)
+                lock (_lockObject)
+                {
+                    CallTaskItem tempItem = _liftCallsList[0];
+                    _liftCallsList[0] = _liftCallsList[targetIndex];
+                    _liftCallsList[targetIndex] = tempItem;
+                }
+            }
+
+            ShowTestData();
 
             // run lift processing
             if (!_liftProcessing)
@@ -1114,7 +1294,65 @@ namespace Lift
                 _backgroundWorkerCloseDoor.RunWorkerAsync(_liftCallsList[0].floorPositionY);
             }
 
-            ShowTestData();
+        }
+
+
+        private void ShowTestData()
+        {
+            testTextBox.Clear();
+
+            for (int i = 0; i < _liftCallsList.Count; i++)
+            {
+                testTextBox.Text += "FLOOR= " + _liftCallsList[i].floorNumber.ToString()
+                    + " TYPE= " + _liftCallsList[i].callType.ToString()
+                    //+ " D= " + _liftCallsList[i].floorDownCall.ToString()
+                    //+ " I= " + _liftCallsList[i].liftInnerCall.ToString()
+                    //+ " Y= " + _liftCallsList[i].floorPositionY.ToString()
+                    + "\n";
+            }
+            Debug.WriteLine("_liftState = " + _liftState.ToString());
+        }
+
+
+        /*
+        private void ShowFloorItemsList()
+        {
+
+            testTextBox.Clear();
+
+            // floor buttons info
+            for (int i = 0; i < FloorCallButtonsList.Count; i++)
+            {
+                testTextBox.Text += "FLOOR CALL = " + FloorCallButtonsList[i].floorNumber.ToString()
+                + " UP = " + FloorCallButtonsList[i].floorUpCall.ToString()
+                + " DOWN = " + FloorCallButtonsList[i].floorDownCall.ToString()
+                + "\n";
+            }
+
+            // lift buttons info
+            for (int i = 0; i < LiftControlButtonsList.Count; i++)
+            {
+                testTextBox.Text += "LIFT TARGET = " + LiftControlButtonsList[i].targetFloor.ToString()
+                + " CALLED = " + LiftControlButtonsList[i].liftInnerCall.ToString()
+                + "\n";
+            }
+        }
+        */
+
+
+        private void SetButtonIndocators()
+        {
+            Debug.WriteLine("_currentLiftFloor  = " + _currentLiftFloor);
+
+            if (_liftState == LiftStateEnum.MOVE_UP)
+            {
+                FloorCallButtonsList[_floorsTotal - _currentLiftFloor - 1].floorUpCall = false;
+                LiftControlButtonsList[_floorsTotal - _currentLiftFloor - 1].liftInnerCall = false;
+
+                // update ListView data and repaint
+                floorListView.Items.Refresh();
+                liftListView.Items.Refresh();
+            }
         }
 
 
@@ -1125,63 +1363,98 @@ namespace Lift
 
             int targetIndex = -1;
 
-            for (int i = 0; i < _liftCallsList.Count; i++)
+            if (_liftState == LiftStateEnum.MOVE_UP)
             {
-                double newMin = Math.Abs(_currentLiftPositionY - _liftCallsList[i].floorPositionY);
-
-                if (newMin < minValue)
+                for (int i = 0; i < _liftCallsList.Count; i++)
                 {
-                    minValue = newMin; // set found min value
+                    double newMin = Math.Abs(_currentLiftPositionY - _liftCallsList[i].floorPositionY);
 
-                    // find closest target
-                    if (_liftState == LiftStateEnum.STOPPED)
+                    if (newMin < minValue)
                     {
-                        targetIndex = i;
-                    }
-                    else if (_liftState == LiftStateEnum.MOVE_UP)
-                    {
+                        minValue = newMin; // set found min value
+
                         // if closest target upper then current position
                         if (_liftCallsList[i].floorPositionY < _currentLiftPositionY)
                         {
                             targetIndex = i;
                         }
                     }
-                    else if (_liftState == LiftStateEnum.MOVE_DOWN)
+                }
+
+                if (targetIndex == -1) // if no upper floors
+                {
+                    _liftState = LiftStateEnum.MOVE_DOWN; // then change lift direction
+                    Debug.WriteLine("change lift direction: DOWN");
+                }
+
+                Debug.WriteLine("SORT - UP: targetIndex = " + targetIndex);
+            }
+
+
+            if (_liftState == LiftStateEnum.MOVE_DOWN)
+            {
+                for (int i = 0; i < _liftCallsList.Count; i++)
+                {
+                    double newMin = Math.Abs(_currentLiftPositionY - _liftCallsList[i].floorPositionY);
+
+                    if (newMin < minValue)
                     {
-                        // if closest target lower then current position
+                        minValue = newMin; // set found min value
+
+                        // if closest target upper then current position
                         if (_liftCallsList[i].floorPositionY > _currentLiftPositionY)
                         {
                             targetIndex = i;
                         }
                     }
                 }
+
+                if (targetIndex == -1) // if no upper floors
+                {
+                    _liftState = LiftStateEnum.MOVE_UP; // then change lift direction
+                    Debug.WriteLine("change lift direction: UP");
+                }
             }
 
-            // set target element to 0 position (swap elements)
-            lock (_lockObject)
+
+            if (_liftState == LiftStateEnum.MOVE_UP)
             {
-                CallItem tempItem = _liftCallsList[0];
-                _liftCallsList[0] = _liftCallsList[targetIndex];
-                _liftCallsList[targetIndex] = tempItem;
+                for (int i = 0; i < _liftCallsList.Count; i++)
+                {
+                    double newMin = Math.Abs(_currentLiftPositionY - _liftCallsList[i].floorPositionY);
+
+                    if (newMin < minValue)
+                    {
+                        minValue = newMin; // set found min value
+
+                        // if closest target upper then current position
+                        if (_liftCallsList[i].floorPositionY < _currentLiftPositionY)
+                        {
+                            targetIndex = i;
+                        }
+                    }
+                }
+
+
+                if (targetIndex == -1) // if no upper floors
+                {
+                    _liftState = LiftStateEnum.MOVE_DOWN; // then change lift direction
+                    Debug.WriteLine("change lift direction: DOWN");
+                }
+
+                Debug.WriteLine("SORT - UP: targetIndex = " + targetIndex);
             }
 
-
-            ShowTestData();
-        }
-
-
-        private void ShowTestData()
-        {
-            testTextBox.Clear();
-
-            for (int i = 0; i < _liftCallsList.Count; i++)
+            if (targetIndex >= 0 && targetIndex < _liftCallsList.Count) // add !!!
             {
-                testTextBox.Text += "FLOOR = " + _liftCallsList[i].floorNumber.ToString()
-                    + " TARGET Y = " + _liftCallsList[i].floorPositionY.ToString()
-                    + "\n";
+                // set target element to 0 position (swap elements)
+                lock (_lockObject)
+                {
+                    CallTaskItem tempItem = _liftCallsList[0];
+                    _liftCallsList[0] = _liftCallsList[targetIndex];
+                    _liftCallsList[targetIndex] = tempItem;
+                }
             }
-
-            //Debug.WriteLine("_liftState = " + _liftState.ToString());
         }
 
 
